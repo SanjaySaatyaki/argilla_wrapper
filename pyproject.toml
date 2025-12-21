@@ -1,0 +1,13 @@
+[project]
+name = "argilla_wrapper"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "argilla>=2.8.0",
+    "black>=25.12.0",
+    "fastapi>=0.124.4",
+    "python-dotenv>=1.2.1",
+    "uvicorn>=0.38.0",
+]
