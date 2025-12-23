@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, BackgroundTasks
+from fastapi.responses import FileResponse
 from app.schemas import *
 import argilla as ag
 import sys
@@ -7,6 +8,9 @@ from pathlib import Path
 # Add parent directory to path to import config
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import ARGILLA_API_URL, ARGILLA_API_KEY
+import tempfile
+import os
+import shutil
 
 # Initialize Argilla client
 try:
@@ -21,6 +25,11 @@ app = FastAPI(title="Argilla Management API")
 
 
 # Routes for user management
+
+async def cleanup(path: str):
+    shutil.rmtree(path)
+
+
 @app.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate):
     """
@@ -251,13 +260,14 @@ async def create_dataset(ds_ws: CreateDataset):
                             workspace=ds_ws.workspace_name,
                             settings=settings)
         dataset.create()
+        return {"message": "successfully created dataset"}
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to add dataset to workspace: {str(e)}",
         )
 
-@app.post("/record/chat/create")
+@app.post("/record/chat/create") #TODO: add return response and complete error handling
 async def create_chat_record(record: CreateChatRecord):
     dataset = client.datasets(name = record.dataset_name,workspace= record.workspace_name)
     record = [ag.Record(
@@ -270,6 +280,41 @@ async def create_chat_record(record: CreateChatRecord):
         metadata=[ag.TermsMetadataProperty(name=key,title=value) for key, value in record.items()]
     )]
     dataset.records.log(record)
+
+
+@app.post("/export/dataset")#Handled removing completed datasets while exporting.
+async def export_data_set(export_ds: ExportDataset,background_tasks: BackgroundTasks):
+    dataset = client.datasets(name = export_ds.dataset_name,workspace= export_ds.workspace_name)
+    if export_ds.export_type == "completed":
+        query = ag.Query(
+            filter=ag.Filter(
+                ("status", "==", "completed")
+            )
+        )
+        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False,dir=".")
+        temp_file_path = temp_file.name
+        temp_file.close()
+
+        query_filtered_record = dataset.records(query=query).to_datasets()
+        query_filtered_record.to_json(path_or_buf=temp_file_path)
+        background_tasks.add_task(os.remove, temp_file_path)
+        return FileResponse(path=temp_file_path, filename="records.json", media_type="application/json")
+        
+    if export_ds.export_type == "full":   
+        temp_dir = tempfile.mkdtemp(dir=".")
+        dataset_tempdir = tempfile.mkdtemp(dir=".")
+        try:
+            dataset.to_disk(path=temp_dir)
+            # Create zip outside temp_dir to avoid nesting
+            zip_path = os.path.abspath(os.path.join(dataset_tempdir, f"{export_ds.dataset_name}.zip"))
+            shutil.make_archive(zip_path.replace('.zip', ''), 'zip', temp_dir)
+            background_tasks.add_task(cleanup, dataset_tempdir)
+            return FileResponse(path=zip_path, filename=f"{export_ds.dataset_name}.zip", media_type="application/zip")
+        finally:
+            shutil.rmtree(temp_dir)
+        
+    
+    
 
 @app.get("/health")
 async def health_check():

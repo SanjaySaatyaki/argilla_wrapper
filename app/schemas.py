@@ -45,3 +45,9 @@ class CreateChatRecord(BaseModel):
     meta_data: dict
     dataset_name: str
     workspace_name: str
+
+class ExportDataset(BaseModel):
+    workspace_name:str
+    dataset_name:str
+    export_type: str
+    
