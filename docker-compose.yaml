@@ -80,11 +80,42 @@ services:
     networks:
       - argilla
 
-networks:
-  argilla:
-    driver: bridge
+  ray-head:
+    image: rayproject/ray:latest-cpu
+    command: ray start --head --port=6379 --dashboard-host 0.0.0.0
+    ports:
+      - "8265:8265"   # Ray dashboard
+      - "6379:6379"   # Ray head node port
+    networks:
+      - argilla
+
+  ray-worker:
+    image: rayproject/ray:latest-cpu
+    depends_on:
+      - ray-head
+    command: ray start --address=ray-head:6379
+    networks:
+      - argilla
+
+  mlflow:
+    image: mlflow/mlflow:latest
+    environment:
+      MLFLOW_TRACKING_URI: http://0.0.0.0:5000
+      MLFLOW_BACKEND_STORE_URI: sqlite:///mlflow.db
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: /mlflow/artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflowdata:/mlflow
+    networks:
+      - argilla
 
 volumes:
   argilladata:
   elasticdata:
   postgresdata:
+  mlflowdata:
+
+networks:
+  argilla:
+    driver: bridge
