@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.124.4",
     "mlflow>=3.8.1",
     "python-dotenv>=1.2.1",
+    "ray[client]>=2.53.0",
     "torch>=2.10.0",
     "transformers[torch]>=4.57.6",
     "uvicorn>=0.38.0",

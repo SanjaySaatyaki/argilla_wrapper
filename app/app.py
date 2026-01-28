@@ -329,7 +329,7 @@ async def train_model(train_request: TrainModelRequest):
     try:
         
         # Initialize Ray job submission client
-        ray_client = job_submission.JobSubmissionClient()
+        ray_client = job_submission.JobSubmissionClient("http://127.0.0.1:8265")
         
         # Submit training job to Ray cluster
         job_id = ray_client.submit_job(
