@@ -82,27 +82,33 @@ services:
 
   ray-head:
     image: rayproject/ray:latest-cpu
-    command: ray start --head --port=6379 --dashboard-host 0.0.0.0
+    restart: unless-stopped
+    command: ray start --head --port=6380 --dashboard-host 0.0.0.0 --block
     ports:
       - "8265:8265"   # Ray dashboard
-      - "6379:6379"   # Ray head node port
+      - "6380:6380"   # Ray head node port
     networks:
       - argilla
+    shm_size: '2gb'
 
   ray-worker:
     image: rayproject/ray:latest-cpu
+    restart: unless-stopped
     depends_on:
       - ray-head
-    command: ray start --address=ray-head:6379
+    command: ray start --address=ray-head:6380 --block
     networks:
       - argilla
+    shm_size: '2gb'
 
   mlflow:
-    image: mlflow/mlflow:latest
+    image: ghcr.io/mlflow/mlflow:latest
+    restart: unless-stopped
     environment:
       MLFLOW_TRACKING_URI: http://0.0.0.0:5000
-      MLFLOW_BACKEND_STORE_URI: sqlite:///mlflow.db
+      MLFLOW_BACKEND_STORE_URI: sqlite:///mlflow/mlflow.db
       MLFLOW_DEFAULT_ARTIFACT_ROOT: /mlflow/artifacts
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow/mlflow.db --default-artifact-root /mlflow/artifacts
     ports:
       - "5000:5000"
     volumes:

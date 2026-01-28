@@ -59,7 +59,7 @@ class TextClassificationModel:
             mlflow.log_param("weight_decay", 0.01)
             
             # Tokenize all splits in the DatasetDict
-            tokenized_dataset = self.dataset_dict.map(self.tokenize, batched=True)
+            tokenized_dataset = self.dataset_dict.map(lambda examples, idx: self.tokenize(examples) if idx < 100 else examples, batched=True, with_indices=True)
             tokenized_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
 
             training_args = TrainingArguments(
@@ -108,4 +108,4 @@ if __name__ == "__main__":
     mlflow.set_experiment("text-classification")
     
     classification_model = TextClassificationModel(model_name, dataset_name)
-    trained_model, tokenizer = classification_model.train(epochs=3)
+    trained_model, tokenizer = classification_model.train(epochs=1)

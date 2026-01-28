@@ -51,3 +51,8 @@ class ExportDataset(BaseModel):
     dataset_name:str
     export_type: str
     
+class TrainModelRequest(BaseModel):
+    workspace_name: str
+    dataset_name: str
+    model_name: str = "distilbert-base-uncased"
+    epochs: int = 3

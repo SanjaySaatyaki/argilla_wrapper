@@ -11,6 +11,8 @@ from config import ARGILLA_API_URL, ARGILLA_API_KEY
 import tempfile
 import os
 import shutil
+import ray
+from ray import job_submission
 
 # Initialize Argilla client
 try:
@@ -313,7 +315,41 @@ async def export_data_set(export_ds: ExportDataset,background_tasks: BackgroundT
         finally:
             shutil.rmtree(temp_dir)
         
+@app.post("/train/model")
+async def train_model(train_request: TrainModelRequest):
+    """
+    Submit a classification model training job to Ray cluster.
     
+    Args:
+        train_request: Training request with model_name and dataset_name
+        
+    Returns:
+        Job submission details
+    """
+    try:
+        
+        # Initialize Ray job submission client
+        ray_client = job_submission.JobSubmissionClient()
+        
+        # Submit training job to Ray cluster
+        job_id = ray_client.submit_job(
+            entrypoint=f"python train_classification_model.py --model_name {train_request.model_name} --dataset_name {train_request.dataset_name} --workspace_name {train_request.workspace_name}",
+            runtime_env={
+                "pip": ["argilla", "scikit-learn", "transformers"]
+            }
+        )
+        
+        return {
+            "message": "Training job submitted successfully",
+            "job_id": job_id,
+            "model_name": train_request.model_name,
+            "dataset_name": train_request.dataset_name
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to submit training job: {str(e)}"
+        )
     
 
 @app.get("/health")
