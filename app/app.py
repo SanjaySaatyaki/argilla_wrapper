@@ -335,7 +335,8 @@ async def train_model(train_request: TrainModelRequest):
         job_id = ray_client.submit_job(
             entrypoint=f"python train_classification_model.py --model_name {train_request.model_name} --dataset_name {train_request.dataset_name} --workspace_name {train_request.workspace_name}",
             runtime_env={
-                "pip": ["argilla", "scikit-learn", "transformers"]
+                "pip": ["argilla", "transformers","mlflow","datasets","requests","torch","python-dotenv"],
+                "working_dir": "./app/resource",
             }
         )
         

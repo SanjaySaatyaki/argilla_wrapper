@@ -90,16 +90,11 @@ services:
     networks:
       - argilla
     shm_size: '2gb'
-
-  ray-worker:
-    image: rayproject/ray:latest-cpu
-    restart: unless-stopped
-    depends_on:
-      - ray-head
-    command: ray start --address=ray-head:6380 --block
-    networks:
-      - argilla
-    shm_size: '2gb'
+    volumes:
+      - /tmp/ray:/var/lib/tmp/ray  # Map a host directory to Ray's temp dir
+    environment:
+      - RAY_RUNTIME_ENV_CONDA_CACHE_SIZE_GB=10  # Limits conda cache (default 10GB)
+      - RAY_RUNTIME_ENV_WORKING_DIR_CACHE_SIZE_GB=5  # Limits working dir cache (default 10GB)
 
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
@@ -121,6 +116,7 @@ volumes:
   elasticdata:
   postgresdata:
   mlflowdata:
+  ray-head:
 
 networks:
   argilla:
